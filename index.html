@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>three.jsでGLBファイルを表示する</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@v0.151.3/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@v0.151.3/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <script type="module">
+      // 1. Three.jsライブラリの読み込み
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+      import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+
+      // 2. シーンを作成する
+      const scene = new THREE.Scene();
+
+      // 2. カメラを作成する
+      const camera = new THREE.PerspectiveCamera(
+        75, // 視野角
+        window.innerWidth / window.innerHeight, // アスペクト比
+        0.1, // ニアクリップ面
+        1000 // ファークリップ面
+      );
+      camera.position.z = 5; // カメラの位置を設定する
+
+      // 4. レンダラーを作成する
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setClearColor(0xffffff, 0);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.zoomSpeed = 0.5;
+      controls.update(); // 初期化時に一度だけ呼び出す
+
+      // AmbientLightを追加する
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+      scene.add(ambientLight);
+
+      // 5. GLTFLoaderを作成する
+      const loader = new GLTFLoader();
+
+      const dracoLoader = new DRACOLoader(); // DRACOLoaderのインスタンスを作成
+      dracoLoader.setDecoderPath(
+        "https://www.gstatic.com/draco/versioned/decoders/1.4.1/"
+      );
+      loader.setDRACOLoader(dracoLoader); // GLTFLoaderにDRACOLoaderのインスタンスを提供
+
+      // 6. clockを作成する
+      const clock = new THREE.Clock();
+
+      // 7. 3Dモデルのロード＆描画
+      loader.load(
+        "zombie.gltf",
+        function (gltf) {
+          // アニメーションを読み込む
+          let mixer = new THREE.AnimationMixer(gltf.scene);
+          gltf.animations.forEach((clip) => {
+            mixer.clipAction(clip).play();
+          });
+
+          scene.add(gltf.scene);
+
+          // アニメーションを更新する関数を定義する
+          function update() {
+            if (mixer) {
+              mixer.update(clock.getDelta());
+            }
+          }
+
+          // アニメーションを再生するイベントを設定する
+          renderer.setAnimationLoop(() => {
+            update();
+            renderer.render(scene, camera);
+          });
+        },
+        undefined,
+        function (error) {
+          console.error(error);
+        }
+      );
+    </script>
+  </body>
+</html>
